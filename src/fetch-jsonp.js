@@ -1,3 +1,4 @@
+//声明一些常量
 const defaultOptions = {
   timeout: 5000,
   jsonpCallback: 'callback',
@@ -8,6 +9,7 @@ function generateCallbackFunction() {
   return `jsonp_${Date.now()}_${Math.ceil(Math.random() * 100000)}`;
 }
 
+//清除某个函数的方法
 function clearFunction(functionName) {
   // IE8 throws an exception when you try to delete a property on window
   // http://stackoverflow.com/a/1824228/751089
@@ -18,6 +20,7 @@ function clearFunction(functionName) {
   }
 }
 
+//移除script标签的函数
 function removeScript(scriptId) {
   const script = document.getElementById(scriptId);
   if (script) {
@@ -25,19 +28,28 @@ function removeScript(scriptId) {
   }
 }
 
+//fetchjsonp主函数，参数url和一个options对象默认空对象
 function fetchJsonp(_url, options = {}) {
   // to avoid param reassign
+//  拿到url
   let url = _url;
+//  超时常量设定，默认5000ms
   const timeout = options.timeout || defaultOptions.timeout;
+//   jsonp的执行函数名 默认callback
   const jsonpCallback = options.jsonpCallback || defaultOptions.jsonpCallback;
 
   let timeoutId;
-
+// 使用promise对象作为返回
   return new Promise((resolve, reject) => {
+    //callback的函数，默认随机名称
     const callbackFunction = options.jsonpCallbackFunction || generateCallbackFunction();
+    //script标签的随机id生成
     const scriptId = `${jsonpCallback}_${callbackFunction}`;
 
+//     设定全局作用域下的函数，也就是后台返回的callback函数执行
+// 使用了箭头函数，response是json数据
     window[callbackFunction] = (response) => {
+      // 执行成功后会执行resolve函数，里面传入一个对象作为参数
       resolve({
         ok: true,
         // keep consistent with fetch API
@@ -54,7 +66,9 @@ function fetchJsonp(_url, options = {}) {
     // Check if the user set their own params, and if not add a ? to start a list of params
     url += (url.indexOf('?') === -1) ? '?' : '&';
 
+//     创建script标签
     const jsonpScript = document.createElement('script');
+//     添加src属性值为url
     jsonpScript.setAttribute('src', `${url}${jsonpCallback}=${callbackFunction}`);
     if (options.charset) {
       jsonpScript.setAttribute('charset', options.charset);
@@ -62,10 +76,13 @@ function fetchJsonp(_url, options = {}) {
     jsonpScript.id = scriptId;
     document.getElementsByTagName('head')[0].appendChild(jsonpScript);
 
+    
+      //超过时间执行
     timeoutId = setTimeout(() => {
       reject(new Error(`JSONP request to ${_url} timed out`));
-
+      //删除callback函数
       clearFunction(callbackFunction);
+//       删除script标签
       removeScript(scriptId);
       window[callbackFunction] = () => {
         clearFunction(callbackFunction);
